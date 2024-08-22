@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:compression="http://www.mulesoft.org/schema/mule/compression" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/compression http://www.mulesoft.org/schema/mule/compression/current/mule-compression.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="f1db0fcd-61f5-42b9-8ffe-c1271abbaf38" >
+		<db:mssql-connection host="127.0.0.1" instanceName="SQLEXPRESS" port="1433" user="sa" password="root" databaseName="AMIRDB"/>
+	</db:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="a48942a4-58b8-45d7-b90c-dd5d19c4cf9f" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="dbFlow" doc:id="85fd00fe-8555-4b33-8219-41ef76207b8d" >
+		<http:listener doc:name="Listener" doc:id="43fd4f36-4d48-4c61-9e74-6c958b779bb9" config-ref="HTTP_Listener_config" path="p"/>
+		<db:select doc:name="Select" doc:id="fcfaae35-ef1f-4184-ae4f-da43fb2e88e0" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT [ID]
+      ,[NAME]
+      ,[SALARY]
+  FROM [AMIRDB].[dbo].[AMIRTB]]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="09160491-d4e6-4d70-a72d-21d6514a6ba9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="dbFlow2" doc:id="a3d92ca4-80f7-4764-b5d9-64b71894ae74" >
+		<http:listener doc:name="Listener" doc:id="cad52d68-08c3-4e76-b77c-a12c43e7c6e3" config-ref="HTTP_Listener_config" path="t"/>
+		<ee:transform doc:name="Transform Message" doc:id="e025ddec-2c47-45db-91df-3f50694b9215" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv
+---
+{
+	id: "6",
+	name:"elham",
+	salary: "50000"
+	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<compression:compress doc:name="Compress" doc:id="8f29dd7d-a30e-4621-a3cf-8a31b7a07db8" >
+			<compression:compressor >
+				<compression:gzip-compressor />
+			</compression:compressor>
+		</compression:compress>
+		<!-- [STUDIO:"Write"]<file:write doc:name="Write" doc:id="b8f6c310-0267-4449-a0f1-c5bae86b0494" path="C:\dev\hello.zip"/> [STUDIO] -->
+		<ee:transform doc:name="Transform Message" doc:id="8cc3a882-a05b-450b-8792-6b91074ba534" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="dbFlow1" doc:id="c1be8f71-57cb-4af7-8895-e1a4be3b4072" >
+		<http:listener doc:name="Listener" doc:id="f1ca6f88-d71b-4206-b9d3-bac84fc170af" config-ref="HTTP_Listener_config" path="pr"/>
+		<db:stored-procedure doc:name="Stored procedure" doc:id="b08c512d-f713-485b-96f3-f7e99c9c16b0" config-ref="Database_Config">
+			<db:sql ><![CDATA[{call POSTMEMBERBYID(:id,:name,:salary)}]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: "6",
+	name:"elham",
+	salary: "50000"
+	
+}]]]></db:input-parameters>
+		</db:stored-procedure>
+		<ee:transform doc:name="Transform Message" doc:id="13be713b-727d-4681-92b5-ce606de63601" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	
+</mule>
